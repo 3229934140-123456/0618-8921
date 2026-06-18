@@ -28,7 +28,9 @@ export default function SupplierDetail() {
   const { suppliers, quotations, gifts } = useAppStore();
   const supplier = suppliers.find((s) => s.id === id);
   const supplierQuotations = quotations.filter((q) => q.supplierId === id);
-  const findGiftByQuotation = (giftName: string) => {
+  const findGiftByQuotation = (giftId: string, giftName: string) => {
+    const byId = gifts.find((g) => g.id === giftId);
+    if (byId) return byId;
     return gifts.find((g) => g.name === giftName);
   };
 
@@ -258,7 +260,7 @@ export default function SupplierDetail() {
                       </thead>
                       <tbody className="divide-y divide-border">
                         {supplierQuotations.map((quote) => {
-                          const matchedGift = findGiftByQuotation(quote.giftName);
+                          const matchedGift = findGiftByQuotation(quote.giftId, quote.giftName);
                           return (
                             <tr key={quote.id} className="hover:bg-bg/30 transition-colors">
                               <td className="py-4 px-5">

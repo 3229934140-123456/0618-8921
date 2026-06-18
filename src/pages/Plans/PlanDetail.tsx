@@ -77,42 +77,48 @@ export default function PlanDetail() {
     return qs.reduce((min, q) => (q.unitPrice < min.unitPrice ? q : min));
   };
 
-  const handleAddReview = () => {
-    if (!reviewer || !reviewContent) return;
+  const saveReviewRecord = (status: 'approved' | 'rejected' | 'comment', overrideContent?: string) => {
     const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const content = overrideContent || reviewContent || defaultContentForStatus(status);
+    const finalReviewer = reviewer || '系统审核';
     addReviewRecord({
       id: String(Date.now()),
       planId: plan.id,
-      reviewer,
+      reviewer: finalReviewer,
       time: now,
-      content: reviewContent,
-      status: reviewStatus,
+      content,
+      status,
     });
+  };
+
+  const defaultContentForStatus = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return '审核通过，礼品方案符合预算要求，供应商资质齐全，可进入下一阶段。';
+      case 'rejected':
+        return '方案需要进一步完善，请调整礼品搭配或预算后重新提交。';
+      default:
+        return '已阅。';
+    }
+  };
+
+  const handleAddReview = () => {
+    if (!reviewContent && !reviewer) return;
+    saveReviewRecord(reviewStatus);
     setReviewContent('');
   };
 
   const handleStatusChangeWithReview = (status: PlanStatus) => {
     updatePlanStatus(plan.id, status);
-    if (status === 'approved' && reviewer) {
-      addReviewRecord({
-        id: String(Date.now()),
-        planId: plan.id,
-        reviewer,
-        time: new Date().toISOString().slice(0, 16).replace('T', ' '),
-        content: '审核通过，礼品方案符合要求，可进入下一阶段。',
-        status: 'approved',
-      });
+    if (status === 'approved') {
+      const content = reviewContent || '审核通过，礼品方案符合预算要求，供应商资质齐全，可进入下一阶段执行。';
+      saveReviewRecord('approved', content);
     }
-    if (status === 'draft' && reviewer) {
-      addReviewRecord({
-        id: String(Date.now()),
-        planId: plan.id,
-        reviewer,
-        time: new Date().toISOString().slice(0, 16).replace('T', ' '),
-        content: reviewContent || '方案需要修改，请完善后重新提交。',
-        status: 'rejected',
-      });
+    if (status === 'draft') {
+      const content = reviewContent || '方案需要调整，请完善礼品方案后重新提交审核。';
+      saveReviewRecord('rejected', content);
     }
+    setReviewContent('');
   };
 
   const reviewStatusColors: Record<string, string> = {

@@ -63,6 +63,7 @@ export interface Quotation {
   id: string;
   supplierId: string;
   supplierName: string;
+  giftId: string;
   giftName: string;
   unitPrice: number;
   totalPrice: number;
