@@ -29,7 +29,10 @@ export default function Inventory() {
 
   const inventory = useAppStore((s) => s.inventory);
   const stockRecords = useAppStore((s) => s.stockRecords);
+  const unclaimedList = useAppStore((s) => s.unclaimedList);
   const addStockRecord = useAppStore((s) => s.addStockRecord);
+  const remindUnclaimed = useAppStore((s) => s.remindUnclaimed);
+  const remindSingleUnclaimed = useAppStore((s) => s.remindSingleUnclaimed);
 
   const filteredItems = inventory.filter((item) =>
     item.giftName.toLowerCase().includes(searchKeyword.toLowerCase())
@@ -73,13 +76,20 @@ export default function Inventory() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  const unclaimedList = [
-    { name: '张伟', dept: '技术部', gift: '端午臻品粽子礼盒', tier: 'premium', date: '2024-06-01', reason: '出差中' },
-    { name: '李娜', dept: '市场部', gift: '端午臻品粽子礼盒', tier: 'standard', date: '2024-06-01', reason: '请假' },
-    { name: '王芳', dept: '设计部', gift: '定制logo保温杯', tier: 'standard', date: '2024-06-02', reason: '地址不详' },
-    { name: '刘强', dept: '销售部', gift: '端午臻品粽子礼盒', tier: 'luxury', date: '2024-06-01', reason: '外派' },
-    { name: '陈静', dept: '人力资源部', gift: '定制logo保温杯', tier: 'premium', date: '2024-06-02', reason: '待领取' },
-  ];
+  const handleBatchRemind = () => {
+    const unremindedIds = unclaimedList.filter(u => !u.reminded).map(u => u.id);
+    if (unremindedIds.length === 0) {
+      showToast('所有员工均已提醒过');
+      return;
+    }
+    const reminded = remindUnclaimed(unremindedIds);
+    showToast(`已向 ${reminded.length} 名员工发送领取提醒`);
+  };
+
+  const handleSingleRemind = (id: string, name: string) => {
+    remindSingleUnclaimed(id);
+    showToast(`已向 ${name} 发送领取提醒`);
+  };
 
   return (
     <PageContainer title="库存管理" subtitle="礼品库存管理与领取发放追踪">
@@ -317,7 +327,7 @@ export default function Inventory() {
                   <Button variant="outline">
                     导出名单
                   </Button>
-                  <Button onClick={() => showToast(`已向 ${unclaimedList.length} 名员工发送领取提醒`)}>
+                  <Button onClick={handleBatchRemind}>
                     <PackageCheck className="w-4 h-4" />
                     批量提醒
                   </Button>
@@ -346,6 +356,9 @@ export default function Inventory() {
                     <th className="text-left py-3 px-5 text-xs font-medium text-text-light">
                       未领取原因
                     </th>
+                    <th className="text-left py-3 px-5 text-xs font-medium text-text-light">
+                      提醒状态
+                    </th>
                     <th className="text-center py-3 px-5 text-xs font-medium text-text-light">
                       操作
                     </th>
@@ -353,7 +366,7 @@ export default function Inventory() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {unclaimedList.map((item, index) => (
-                    <tr key={index} className="hover:bg-bg/30 transition-colors">
+                    <tr key={item.id} className="hover:bg-bg/30 transition-colors">
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
                           <img
@@ -371,9 +384,24 @@ export default function Inventory() {
                       </td>
                       <td className="py-4 px-5 text-sm text-text-light">{item.date}</td>
                       <td className="py-4 px-5 text-sm text-text-light">{item.reason}</td>
+                      <td className="py-4 px-5">
+                        {item.reminded ? (
+                          <div>
+                            <StatusBadge status="active">已提醒</StatusBadge>
+                            <p className="text-xs text-text-light mt-1">{item.remindTime}</p>
+                          </div>
+                        ) : (
+                          <StatusBadge status="inactive">未提醒</StatusBadge>
+                        )}
+                      </td>
                       <td className="py-4 px-5 text-center">
-                        <Button variant="ghost" size="sm">
-                          发送提醒
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSingleRemind(item.id, item.name)}
+                          disabled={item.reminded}
+                        >
+                          {item.reminded ? '已提醒' : '发送提醒'}
                         </Button>
                       </td>
                     </tr>

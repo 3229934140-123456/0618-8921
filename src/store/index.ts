@@ -16,6 +16,8 @@ import type {
   PlanGift,
   PlanStatus,
   DesignStatus,
+  UnclaimedItem,
+  SyncStatus,
 } from '../types';
 import { mockPlans } from '../data/mockPlans';
 import { mockGifts } from '../data/mockGifts';
@@ -31,6 +33,14 @@ import {
   mockFestivals,
 } from '../data/mockMisc';
 
+const mockUnclaimedList: UnclaimedItem[] = [
+  { id: 'u1', name: '张伟', dept: '技术部', gift: '端午臻品粽子礼盒', tier: 'premium', date: '2024-06-01', reason: '出差中', reminded: false, remindTime: null },
+  { id: 'u2', name: '李娜', dept: '市场部', gift: '端午臻品粽子礼盒', tier: 'standard', date: '2024-06-01', reason: '请假', reminded: false, remindTime: null },
+  { id: 'u3', name: '王芳', dept: '设计部', gift: '定制logo保温杯', tier: 'standard', date: '2024-06-02', reason: '地址不详', reminded: false, remindTime: null },
+  { id: 'u4', name: '刘强', dept: '销售部', gift: '端午臻品粽子礼盒', tier: 'luxury', date: '2024-06-01', reason: '外派', reminded: false, remindTime: null },
+  { id: 'u5', name: '陈静', dept: '人力资源部', gift: '定制logo保温杯', tier: 'premium', date: '2024-06-02', reason: '待领取', reminded: false, remindTime: null },
+];
+
 interface AppState {
   plans: PurchasePlan[];
   gifts: Gift[];
@@ -45,6 +55,8 @@ interface AppState {
   todos: TodoItem[];
   festivals: FestivalCountdown[];
   notifications: string[];
+  unclaimedList: UnclaimedItem[];
+  employeeSyncStatus: SyncStatus;
 
   addPlan: (plan: PurchasePlan) => void;
   updatePlan: (id: string, updates: Partial<PurchasePlan>) => void;
@@ -64,7 +76,8 @@ interface AppState {
   addStockRecord: (record: StockRecord) => void;
 
   syncEmployeesToSupplier: () => string[];
-  remindUnclaimed: (names: string[]) => string[];
+  remindUnclaimed: (ids: string[]) => string[];
+  remindSingleUnclaimed: (id: string) => boolean;
 
   addNotification: (msg: string) => void;
   clearNotifications: () => void;
@@ -84,6 +97,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   todos: [...mockTodos],
   festivals: [...mockFestivals],
   notifications: [],
+  unclaimedList: [...mockUnclaimedList],
+  employeeSyncStatus: {
+    syncedCount: 0,
+    lastSyncTime: null,
+  },
 
   addPlan: (plan) =>
     set((state) => ({ plans: [plan, ...state.plans] })),
@@ -170,11 +188,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     const synced = get()
       .employees.filter((e) => e.addressComplete)
       .map((e) => e.name);
+    set({
+      employeeSyncStatus: {
+        syncedCount: synced.length,
+        lastSyncTime: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      },
+    });
     return synced;
   },
 
-  remindUnclaimed: (names) => {
-    return names;
+  remindUnclaimed: (ids) => {
+    const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    set((state) => ({
+      unclaimedList: state.unclaimedList.map((item) =>
+        ids.includes(item.id)
+          ? { ...item, reminded: true, remindTime: now }
+          : item
+      ),
+    }));
+    return ids;
+  },
+
+  remindSingleUnclaimed: (id) => {
+    const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    set((state) => ({
+      unclaimedList: state.unclaimedList.map((item) =>
+        item.id === id
+          ? { ...item, reminded: true, remindTime: now }
+          : item
+      ),
+    }));
+    return true;
   },
 
   addNotification: (msg) =>

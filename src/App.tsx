@@ -3,6 +3,7 @@ import Dashboard from "@/pages/Dashboard";
 import Plans from "@/pages/Plans";
 import PlanDetail from "@/pages/Plans/PlanDetail";
 import Gifts from "@/pages/Gifts";
+import GiftDetail from "@/pages/Gifts/GiftDetail";
 import Customize from "@/pages/Customize";
 import DesignDetail from "@/pages/Customize/DesignDetail";
 import Employees from "@/pages/Employees";
@@ -10,6 +11,7 @@ import Logistics from "@/pages/Logistics";
 import Customers from "@/pages/Customers";
 import CustomerDetail from "@/pages/Customers/CustomerDetail";
 import Suppliers from "@/pages/Suppliers";
+import SupplierDetail from "@/pages/Suppliers/SupplierDetail";
 import Inventory from "@/pages/Inventory";
 import Reports from "@/pages/Reports";
 
@@ -22,7 +24,7 @@ export default function App() {
         <Route path="/plans/create" element={<Plans />} />
         <Route path="/plans/:id" element={<PlanDetail />} />
         <Route path="/gifts" element={<Gifts />} />
-        <Route path="/gifts/:id" element={<Gifts />} />
+        <Route path="/gifts/:id" element={<GiftDetail />} />
         <Route path="/customize" element={<Customize />} />
         <Route path="/customize/:id" element={<DesignDetail />} />
         <Route path="/employees" element={<Employees />} />
@@ -31,6 +33,7 @@ export default function App() {
         <Route path="/customers/:id" element={<CustomerDetail />} />
         <Route path="/suppliers" element={<Suppliers />} />
         <Route path="/suppliers/compare" element={<Suppliers />} />
+        <Route path="/suppliers/:id" element={<SupplierDetail />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/inventory/unclaimed" element={<Inventory />} />
         <Route path="/reports" element={<Reports />} />

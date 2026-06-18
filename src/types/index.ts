@@ -203,3 +203,20 @@ export interface FestivalCountdown {
   daysLeft: number;
   icon: string;
 }
+
+export interface UnclaimedItem {
+  id: string;
+  name: string;
+  dept: string;
+  gift: string;
+  tier: string;
+  date: string;
+  reason: string;
+  reminded: boolean;
+  remindTime: string | null;
+}
+
+export interface SyncStatus {
+  syncedCount: number;
+  lastSyncTime: string | null;
+}

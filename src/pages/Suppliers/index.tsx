@@ -242,7 +242,7 @@ export default function Suppliers() {
                           </p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/suppliers/${supplier.id}`)}>
                         查看详情 <ChevronRight className="w-4 h-4" />
                       </Button>
                     </div>

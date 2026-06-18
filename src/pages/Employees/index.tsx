@@ -20,6 +20,7 @@ import {
 export default function Employees() {
   const employees = useAppStore((s) => s.employees);
   const syncEmployeesToSupplier = useAppStore((s) => s.syncEmployeesToSupplier);
+  const employeeSyncStatus = useAppStore((s) => s.employeeSyncStatus);
   const [departmentFilter, setDepartmentFilter] = useState('全部部门');
   const [levelFilter, setLevelFilter] = useState('全部级别');
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -60,12 +61,13 @@ export default function Employees() {
       )}
       <div className="space-y-6">
         {/* 统计卡片 */}
-        <div className="grid grid-cols-4 gap-5">
+        <div className="grid grid-cols-5 gap-5">
           {[
             { label: '员工总数', value: employees.length, icon: Users, color: 'from-blue-500 to-blue-600' },
             { label: '地址已完善', value: completeCount, icon: CheckCircle, color: 'from-emerald-500 to-green-500' },
             { label: '待完善地址', value: employees.length - completeCount, icon: AlertCircle, color: 'from-amber-500 to-orange-500' },
             { label: '地址完整率', value: `${completeRate}%`, icon: MapPin, color: 'from-violet-500 to-purple-500' },
+            { label: '已同步供应商', value: employeeSyncStatus.syncedCount, icon: Send, color: 'from-cyan-500 to-teal-500' },
           ].map((stat, index) => (
             <Card key={index}>
               <CardContent className="p-5">
@@ -82,6 +84,33 @@ export default function Employees() {
             </Card>
           ))}
         </div>
+
+        {/* 同步状态 */}
+        {employeeSyncStatus.lastSyncTime && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text">地址同步状态</p>
+                    <p className="text-xs text-text-light mt-0.5">
+                      最近同步时间：{employeeSyncStatus.lastSyncTime}，已同步 {employeeSyncStatus.syncedCount} 名员工地址至供应商
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
+                    <CheckCircle className="w-3 h-3" />
+                    已同步
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 操作栏 */}
         <Card>
