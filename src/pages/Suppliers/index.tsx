@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { mockSuppliers, mockQuotations } from '../../data/mockSuppliers';
+import { Modal } from '../../components/ui/Modal';
+import { useAppStore } from '../../store';
 import { formatCurrency } from '../../utils';
 import {
   Search,
@@ -20,31 +21,96 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
+const FESTIVAL_OPTIONS = ['全部', '春节', '端午节', '中秋节', '国庆节'] as const;
+const GIFT_TYPE_OPTIONS = ['全部', '节日礼盒', '定制周边', '电子卡券', '美妆个护', '坚果零食'] as const;
+
+const UNSPLASH_LOGOS = [
+  'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=100&h=100&fit=crop',
+  'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=100&h=100&fit=crop',
+  'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=100&h=100&fit=crop',
+  'https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=100&h=100&fit=crop',
+  'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=100&h=100&fit=crop',
+  'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=100&h=100&fit=crop',
+  'https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=100&h=100&fit=crop',
+  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=100&h=100&fit=crop',
+];
+
+interface SupplierForm {
+  name: string;
+  contactPerson: string;
+  contactPhone: string;
+  address: string;
+  categories: string;
+}
+
+const emptyForm: SupplierForm = {
+  name: '',
+  contactPerson: '',
+  contactPhone: '',
+  address: '',
+  categories: '',
+};
+
 export default function Suppliers() {
   const navigate = useNavigate();
+  const { suppliers, quotations, addSupplier } = useAppStore();
+
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [activeTab, setActiveTab] = useState<'list' | 'compare'>('list');
 
-  const filteredSuppliers = mockSuppliers.filter((supplier) => {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [form, setForm] = useState<SupplierForm>(emptyForm);
+
+  const [festivalFilter, setFestivalFilter] = useState<string>('全部');
+  const [giftTypeFilter, setGiftTypeFilter] = useState<string>('全部');
+
+  const filteredSuppliers = suppliers.filter((supplier) => {
     const matchStatus = statusFilter === 'all' || supplier.status === statusFilter;
     const matchSearch = supplier.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
                        supplier.contactPerson.includes(searchKeyword);
     return matchStatus && matchSearch;
   });
 
-  const comparisonData = mockQuotations.map(q => ({
-    name: q.supplierName,
-    单价: q.unitPrice,
-    总价: q.totalPrice / 100,
-  }));
+  const filteredQuotations = useMemo(() => {
+    return quotations.filter((q) => {
+      const matchFestival = festivalFilter === '全部' || q.festival === festivalFilter;
+      const matchGiftType = giftTypeFilter === '全部' || q.giftType === giftTypeFilter;
+      return matchFestival && matchGiftType;
+    });
+  }, [quotations, festivalFilter, giftTypeFilter]);
 
-  const colors = ['#1a365d', '#d4a857', '#81b29a', '#e07a5f'];
+  const comparisonData = useMemo(() => {
+    return filteredQuotations.map(q => ({
+      name: q.supplierName,
+      单价: q.unitPrice,
+      总价: q.totalPrice / 100,
+    }));
+  }, [filteredQuotations]);
+
+  const colors = ['#1a365d', '#d4a857', '#81b29a', '#e07a5f', '#6366f1', '#f59e0b', '#10b981', '#ef4444'];
+
+  const handleAddSupplier = () => {
+    addSupplier({
+      id: String(Date.now()),
+      name: form.name,
+      logo: UNSPLASH_LOGOS[Math.floor(Math.random() * UNSPLASH_LOGOS.length)],
+      contactPerson: form.contactPerson,
+      contactPhone: form.contactPhone,
+      address: form.address,
+      rating: 0,
+      status: 'active',
+      categories: form.categories.split(',').map(s => s.trim()).filter(Boolean),
+      cooperateSince: new Date().toISOString().slice(0, 10),
+      quoteCount: 0,
+    });
+    setForm(emptyForm);
+    setShowAddModal(false);
+  };
 
   return (
     <PageContainer title="供应商管理" subtitle="供应商档案管理与报价对比">
       <div className="space-y-6">
-        {/* Tab切换 */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('list')}
@@ -72,7 +138,6 @@ export default function Suppliers() {
 
         {activeTab === 'list' ? (
           <>
-            {/* 操作栏 */}
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-4">
@@ -102,7 +167,7 @@ export default function Suppliers() {
                     </div>
                   </div>
 
-                  <Button>
+                  <Button onClick={() => setShowAddModal(true)}>
                     <Plus className="w-4 h-4" />
                     添加供应商
                   </Button>
@@ -110,7 +175,6 @@ export default function Suppliers() {
               </CardContent>
             </Card>
 
-            {/* 供应商列表 */}
             <div className="grid grid-cols-2 gap-5">
               {filteredSuppliers.map((supplier) => (
                 <Card key={supplier.id} hoverable className="group">
@@ -189,11 +253,46 @@ export default function Suppliers() {
           </>
         ) : (
           <>
-            {/* 报价对比区域 */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-text-light" />
+                    <span className="text-sm text-text-light">节日筛选</span>
+                    <select
+                      value={festivalFilter}
+                      onChange={(e) => setFestivalFilter(e.target.value)}
+                      className="h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      {FESTIVAL_OPTIONS.map(f => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-text-light" />
+                    <span className="text-sm text-text-light">礼品类型</span>
+                    <select
+                      value={giftTypeFilter}
+                      onChange={(e) => setGiftTypeFilter(e.target.value)}
+                      className="h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      {GIFT_TYPE_OPTIONS.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <span className="text-xs text-text-light ml-auto">
+                    共 {filteredQuotations.length} 条报价
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>端午礼品方案报价对比</CardTitle>
+                  <CardTitle>礼品方案报价对比</CardTitle>
                   <Button variant="outline" size="sm">
                     <TrendingUp className="w-4 h-4" />
                     导出对比报告
@@ -201,35 +300,40 @@ export default function Suppliers() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={comparisonData} layout="vertical">
-                      <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" width={120} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#fff',
-                          border: '1px solid #e8e4de',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                        }}
-                        formatter={(value: number, name: string) => [
-                          name === '总价' ? formatCurrency(value * 100) : formatCurrency(value),
-                          name,
-                        ]}
-                      />
-                      <Bar dataKey="单价" barSize={20} radius={[0, 4, 4, 0]}>
-                        {comparisonData.map((_, index) => (
-                          <Cell key={`cell-1-${index}`} fill={colors[index % colors.length]} fillOpacity={0.8} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {filteredQuotations.length === 0 ? (
+                  <div className="h-80 flex items-center justify-center text-text-light text-sm">
+                    暂无匹配的报价数据
+                  </div>
+                ) : (
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={comparisonData} layout="vertical">
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={120} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#fff',
+                            border: '1px solid #e8e4de',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                          }}
+                          formatter={(value: number, name: string) => [
+                            name === '总价' ? formatCurrency(value * 100) : formatCurrency(value),
+                            name,
+                          ]}
+                        />
+                        <Bar dataKey="单价" barSize={20} radius={[0, 4, 4, 0]}>
+                          {comparisonData.map((_, index) => (
+                            <Cell key={`cell-1-${index}`} fill={colors[index % colors.length]} fillOpacity={0.8} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* 报价对比表格 */}
             <Card>
               <CardHeader>
                 <CardTitle>报价详情对比</CardTitle>
@@ -265,7 +369,7 @@ export default function Suppliers() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {mockQuotations.map((quote, index) => (
+                    {filteredQuotations.map((quote, index) => (
                       <tr key={quote.id} className="hover:bg-bg/30 transition-colors">
                         <td className="py-4 px-5">
                           <div className="flex items-center gap-3">
@@ -301,6 +405,13 @@ export default function Suppliers() {
                         </td>
                       </tr>
                     ))}
+                    {filteredQuotations.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-text-light text-sm">
+                          暂无匹配的报价数据
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -308,6 +419,76 @@ export default function Suppliers() {
           </>
         )}
       </div>
+
+      <Modal
+        open={showAddModal}
+        onClose={() => { setShowAddModal(false); setForm(emptyForm); }}
+        title="添加供应商"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-text mb-1">供应商名称</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+              placeholder="请输入供应商名称"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text mb-1">联系人</label>
+            <input
+              type="text"
+              value={form.contactPerson}
+              onChange={(e) => setForm(f => ({ ...f, contactPerson: e.target.value }))}
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+              placeholder="请输入联系人姓名"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text mb-1">联系电话</label>
+            <input
+              type="text"
+              value={form.contactPhone}
+              onChange={(e) => setForm(f => ({ ...f, contactPhone: e.target.value }))}
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+              placeholder="请输入联系电话"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text mb-1">地址</label>
+            <input
+              type="text"
+              value={form.address}
+              onChange={(e) => setForm(f => ({ ...f, address: e.target.value }))}
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+              placeholder="请输入地址"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text mb-1">品类（逗号分隔）</label>
+            <input
+              type="text"
+              value={form.categories}
+              onChange={(e) => setForm(f => ({ ...f, categories: e.target.value }))}
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+              placeholder="例如: 节日礼盒,月饼,粽子"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => { setShowAddModal(false); setForm(emptyForm); }}>
+              取消
+            </Button>
+            <Button
+              onClick={handleAddSupplier}
+              disabled={!form.name || !form.contactPerson}
+            >
+              确认添加
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </PageContainer>
   );
 }

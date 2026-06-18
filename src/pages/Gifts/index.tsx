@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { mockGifts, giftCategories, giftTypes } from '../../data/mockGifts';
+import { giftCategories, giftTypes } from '../../data/mockGifts';
+import { useAppStore } from '../../store';
 import { formatCurrency } from '../../utils';
 import { GiftType } from '../../types';
 import {
@@ -18,12 +19,13 @@ import {
 
 export default function Gifts() {
   const navigate = useNavigate();
+  const gifts = useAppStore((s) => s.gifts);
   const [categoryFilter, setCategoryFilter] = useState('全部');
   const [typeFilter, setTypeFilter] = useState('all');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const filteredGifts = mockGifts.filter((gift) => {
+  const filteredGifts = gifts.filter((gift) => {
     const matchCategory = categoryFilter === '全部' || gift.category === categoryFilter;
     const matchType = typeFilter === 'all' || gift.type === typeFilter;
     const matchSearch = gift.name.toLowerCase().includes(searchKeyword.toLowerCase());

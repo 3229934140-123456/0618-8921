@@ -70,6 +70,8 @@ export interface Quotation {
   deliveryDays: number;
   minOrderQty: number;
   sampleAvailable: boolean;
+  festival?: string;
+  giftType?: string;
 }
 
 export interface Address {

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { mockLogistics } from '../../data/mockMisc';
+import { useAppStore } from '../../store';
 import { formatDate } from '../../utils';
 import { LogisticsStatus } from '../../types';
 import {
@@ -20,6 +21,7 @@ import {
 export default function Logistics() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const logistics = useAppStore((s) => s.logistics);
 
   const statusFilters = [
     { value: 'all', label: '全部状态' },
@@ -29,7 +31,7 @@ export default function Logistics() {
     { value: 'exception', label: '异常' },
   ];
 
-  const filteredOrders = mockLogistics.filter((order) => {
+  const filteredOrders = logistics.filter((order) => {
     const matchStatus = statusFilter === 'all' || order.status === statusFilter;
     const matchSearch = order.recipientName.includes(searchKeyword) ||
                        order.trackingNumber.includes(searchKeyword) ||
@@ -38,14 +40,14 @@ export default function Logistics() {
   });
 
   const stats = [
-    { label: '总发货数', value: mockLogistics.length, icon: Truck, color: 'from-blue-500 to-blue-600' },
-    { label: '运输中', value: mockLogistics.filter(l => l.status === 'in_transit').length, icon: Clock, color: 'from-amber-500 to-orange-500' },
-    { label: '已签收', value: mockLogistics.filter(l => l.status === 'delivered').length, icon: PackageCheck, color: 'from-emerald-500 to-green-500' },
-    { label: '异常件', value: mockLogistics.filter(l => l.status === 'exception').length, icon: AlertTriangle, color: 'from-red-500 to-rose-500' },
+    { label: '总发货数', value: logistics.length, icon: Truck, color: 'from-blue-500 to-blue-600' },
+    { label: '运输中', value: logistics.filter(l => l.status === 'in_transit').length, icon: Clock, color: 'from-amber-500 to-orange-500' },
+    { label: '已签收', value: logistics.filter(l => l.status === 'delivered').length, icon: PackageCheck, color: 'from-emerald-500 to-green-500' },
+    { label: '异常件', value: logistics.filter(l => l.status === 'exception').length, icon: AlertTriangle, color: 'from-red-500 to-rose-500' },
   ];
 
-  const deliveredRate = mockLogistics.length > 0 
-    ? Math.round((mockLogistics.filter(l => l.status === 'delivered').length / mockLogistics.length) * 100) 
+  const deliveredRate = logistics.length > 0 
+    ? Math.round((logistics.filter(l => l.status === 'delivered').length / logistics.length) * 100) 
     : 0;
 
   return (

@@ -3,11 +3,11 @@ import { PageContainer } from '../../components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { mockInventory, mockStockRecords } from '../../data/mockMisc';
+import { Modal } from '../../components/ui/Modal';
+import { useAppStore } from '../../store';
 import { formatDate } from '../../utils';
 import {
   Search,
-  Plus,
   Package,
   TrendingDown,
   AlertTriangle,
@@ -20,22 +20,73 @@ import {
 export default function Inventory() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [activeTab, setActiveTab] = useState<'stock' | 'records' | 'unclaimed'>('stock');
+  const [stockModalType, setStockModalType] = useState<'in' | 'out' | null>(null);
+  const [selectedGiftId, setSelectedGiftId] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [operator, setOperator] = useState('');
+  const [reason, setReason] = useState('');
+  const [toast, setToast] = useState('');
 
-  const filteredItems = mockInventory.filter((item) =>
+  const inventory = useAppStore((s) => s.inventory);
+  const stockRecords = useAppStore((s) => s.stockRecords);
+  const addStockRecord = useAppStore((s) => s.addStockRecord);
+
+  const filteredItems = inventory.filter((item) =>
     item.giftName.toLowerCase().includes(searchKeyword.toLowerCase())
   );
 
-  const lowStockItems = mockInventory.filter((item) => item.quantity < item.minThreshold);
+  const lowStockItems = inventory.filter((item) => item.quantity < item.minThreshold);
 
-  const totalValue = mockInventory.reduce((sum, item) => sum + item.quantity * 50, 0);
+  const totalValue = inventory.reduce((sum, item) => sum + item.quantity * 50, 0);
+
+  const selectedGift = inventory.find((i) => i.giftId === selectedGiftId);
+
+  const openStockModal = (type: 'in' | 'out') => {
+    setStockModalType(type);
+    setSelectedGiftId('');
+    setQuantity('');
+    setOperator('');
+    setReason('');
+  };
+
+  const closeStockModal = () => {
+    setStockModalType(null);
+  };
+
+  const handleSubmitStock = () => {
+    if (!selectedGiftId || !quantity || !operator || !reason) return;
+    addStockRecord({
+      id: String(Date.now()),
+      type: stockModalType!,
+      giftId: selectedGiftId,
+      giftName: selectedGift?.giftName ?? '',
+      quantity: Number(quantity),
+      operator,
+      reason,
+      time: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    });
+    closeStockModal();
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  };
+
+  const unclaimedList = [
+    { name: '张伟', dept: '技术部', gift: '端午臻品粽子礼盒', tier: 'premium', date: '2024-06-01', reason: '出差中' },
+    { name: '李娜', dept: '市场部', gift: '端午臻品粽子礼盒', tier: 'standard', date: '2024-06-01', reason: '请假' },
+    { name: '王芳', dept: '设计部', gift: '定制logo保温杯', tier: 'standard', date: '2024-06-02', reason: '地址不详' },
+    { name: '刘强', dept: '销售部', gift: '端午臻品粽子礼盒', tier: 'luxury', date: '2024-06-01', reason: '外派' },
+    { name: '陈静', dept: '人力资源部', gift: '定制logo保温杯', tier: 'premium', date: '2024-06-02', reason: '待领取' },
+  ];
 
   return (
     <PageContainer title="库存管理" subtitle="礼品库存管理与领取发放追踪">
       <div className="space-y-6">
-        {/* 统计卡片 */}
         <div className="grid grid-cols-4 gap-5">
           {[
-            { label: '库存总SKU', value: mockInventory.length, icon: Package, color: 'from-blue-500 to-blue-600' },
+            { label: '库存总SKU', value: inventory.length, icon: Package, color: 'from-blue-500 to-blue-600' },
             { label: '库存总金额', value: `¥${totalValue.toLocaleString()}`, icon: TrendingDown, color: 'from-violet-500 to-purple-500' },
             { label: '预警商品', value: lowStockItems.length, icon: AlertTriangle, color: 'from-amber-500 to-orange-500' },
             { label: '本月出库', value: '325件', icon: ArrowUpFromLine, color: 'from-emerald-500 to-green-500' },
@@ -56,7 +107,6 @@ export default function Inventory() {
           ))}
         </div>
 
-        {/* Tab切换 */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('stock')}
@@ -95,7 +145,6 @@ export default function Inventory() {
 
         {activeTab === 'stock' && (
           <>
-            {/* 操作栏 */}
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-4">
@@ -111,11 +160,11 @@ export default function Inventory() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => openStockModal('in')}>
                       <ArrowDownToLine className="w-4 h-4" />
                       入库登记
                     </Button>
-                    <Button>
+                    <Button onClick={() => openStockModal('out')}>
                       <ArrowUpFromLine className="w-4 h-4" />
                       出库登记
                     </Button>
@@ -124,7 +173,6 @@ export default function Inventory() {
               </CardContent>
             </Card>
 
-            {/* 库存列表 */}
             <Card>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -228,7 +276,7 @@ export default function Inventory() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {mockStockRecords.map((record) => (
+                  {stockRecords.map((record) => (
                     <tr key={record.id} className="hover:bg-bg/30 transition-colors">
                       <td className="py-4 px-5 text-sm text-text-light">
                         {record.time}
@@ -269,7 +317,7 @@ export default function Inventory() {
                   <Button variant="outline">
                     导出名单
                   </Button>
-                  <Button>
+                  <Button onClick={() => showToast(`已向 ${unclaimedList.length} 名员工发送领取提醒`)}>
                     <PackageCheck className="w-4 h-4" />
                     批量提醒
                   </Button>
@@ -304,13 +352,7 @@ export default function Inventory() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {[
-                    { name: '张伟', dept: '技术部', gift: '端午臻品粽子礼盒', tier: 'premium', date: '2024-06-01', reason: '出差中' },
-                    { name: '李娜', dept: '市场部', gift: '端午臻品粽子礼盒', tier: 'standard', date: '2024-06-01', reason: '请假' },
-                    { name: '王芳', dept: '设计部', gift: '定制logo保温杯', tier: 'standard', date: '2024-06-02', reason: '地址不详' },
-                    { name: '刘强', dept: '销售部', gift: '端午臻品粽子礼盒', tier: 'luxury', date: '2024-06-01', reason: '外派' },
-                    { name: '陈静', dept: '人力资源部', gift: '定制logo保温杯', tier: 'premium', date: '2024-06-02', reason: '待领取' },
-                  ].map((item, index) => (
+                  {unclaimedList.map((item, index) => (
                     <tr key={index} className="hover:bg-bg/30 transition-colors">
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
@@ -342,6 +384,76 @@ export default function Inventory() {
           </Card>
         )}
       </div>
+
+      <Modal
+        open={stockModalType !== null}
+        onClose={closeStockModal}
+        title={stockModalType === 'in' ? '入库登记' : '出库登记'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-text mb-1.5">礼品</label>
+            <select
+              value={selectedGiftId}
+              onChange={(e) => setSelectedGiftId(e.target.value)}
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all"
+            >
+              <option value="">请选择礼品</option>
+              {inventory.map((item) => (
+                <option key={item.giftId} value={item.giftId}>
+                  {item.giftName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text mb-1.5">数量</label>
+            <input
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="请输入数量"
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text placeholder:text-text-light focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text mb-1.5">操作人</label>
+            <input
+              type="text"
+              value={operator}
+              onChange={(e) => setOperator(e.target.value)}
+              placeholder="请输入操作人"
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text placeholder:text-text-light focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text mb-1.5">事由</label>
+            <input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="请输入事由"
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text placeholder:text-text-light focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={closeStockModal}>取消</Button>
+            <Button
+              onClick={handleSubmitStock}
+              disabled={!selectedGiftId || !quantity || !operator || !reason}
+            >
+              确认{stockModalType === 'in' ? '入库' : '出库'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 bg-text text-white rounded-xl shadow-lg text-sm font-medium animate-fade-in">
+          {toast}
+        </div>
+      )}
     </PageContainer>
   );
 }

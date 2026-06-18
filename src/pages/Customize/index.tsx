@@ -4,7 +4,8 @@ import { PageContainer } from '../../components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { mockDesignDrafts } from '../../data/mockMisc';
+import { Modal } from '../../components/ui/Modal';
+import { useAppStore } from '../../store';
 import { formatDate } from '../../utils';
 import { DesignStatus } from '../../types';
 import {
@@ -18,10 +19,23 @@ import {
   Eye,
 } from 'lucide-react';
 
+const UNSPLASH_IMAGES = [
+  'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1626785774625-ddcddc3445e9?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1634986666676-ec8fd927c23d?w=800&h=600&fit=crop',
+];
+
 export default function Customize() {
   const navigate = useNavigate();
+  const { designDrafts, plans, addDesignDraft } = useAppStore();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formPlanId, setFormPlanId] = useState('');
+  const [formVersion, setFormVersion] = useState('');
+  const [formSubmitter, setFormSubmitter] = useState('');
 
   const statusFilters = [
     { value: 'all', label: '全部状态' },
@@ -30,18 +44,37 @@ export default function Customize() {
     { value: 'rejected', label: '已驳回' },
   ];
 
-  const filteredDrafts = mockDesignDrafts.filter((draft) => {
+  const filteredDrafts = designDrafts.filter((draft) => {
     const matchStatus = statusFilter === 'all' || draft.status === statusFilter;
     const matchSearch = draft.planName.toLowerCase().includes(searchKeyword.toLowerCase());
     return matchStatus && matchSearch;
   });
 
-  const pendingCount = mockDesignDrafts.filter(d => d.status === 'pending').length;
+  const pendingCount = designDrafts.filter(d => d.status === 'pending').length;
+
+  const handleSubmit = () => {
+    if (!formPlanId || !formVersion || !formSubmitter) return;
+    const selectedPlan = plans.find(p => p.id === formPlanId);
+    const randomImage = UNSPLASH_IMAGES[Math.floor(Math.random() * UNSPLASH_IMAGES.length)];
+    addDesignDraft({
+      id: String(Date.now()),
+      planId: formPlanId,
+      planName: selectedPlan?.name || '',
+      version: formVersion,
+      status: 'pending',
+      imageUrl: randomImage,
+      submitter: formSubmitter,
+      submitTime: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    });
+    setFormPlanId('');
+    setFormVersion('');
+    setFormSubmitter('');
+    setModalOpen(false);
+  };
 
   return (
     <PageContainer title="定制设计管理" subtitle="设计稿审核与定制礼品管理">
       <div className="space-y-6">
-        {/* 统计卡片 */}
         <div className="grid grid-cols-4 gap-5">
           {[
             { label: '待审核设计', value: pendingCount, icon: Clock, color: 'from-amber-500 to-orange-500' },
@@ -65,7 +98,6 @@ export default function Customize() {
           ))}
         </div>
 
-        {/* 操作栏 */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-4">
@@ -97,7 +129,7 @@ export default function Customize() {
                 </div>
               </div>
 
-              <Button>
+              <Button onClick={() => setModalOpen(true)}>
                 <Upload className="w-4 h-4" />
                 上传设计稿
               </Button>
@@ -105,7 +137,6 @@ export default function Customize() {
           </CardContent>
         </Card>
 
-        {/* 设计稿列表 */}
         <div className="grid grid-cols-3 gap-5">
           {filteredDrafts.map((draft) => (
             <Card
@@ -167,6 +198,57 @@ export default function Customize() {
           </Card>
         )}
       </div>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="上传设计稿">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-text mb-1.5">关联计划</label>
+            <select
+              value={formPlanId}
+              onChange={(e) => setFormPlanId(e.target.value)}
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="">请选择计划</option>
+              {plans.map((plan) => (
+                <option key={plan.id} value={plan.id}>
+                  {plan.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text mb-1.5">版本号</label>
+            <input
+              type="text"
+              value={formVersion}
+              onChange={(e) => setFormVersion(e.target.value)}
+              placeholder="例如：v1.0"
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text placeholder:text-text-light focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text mb-1.5">提交人</label>
+            <input
+              type="text"
+              value={formSubmitter}
+              onChange={(e) => setFormSubmitter(e.target.value)}
+              placeholder="请输入提交人姓名"
+              className="w-full h-10 px-3 bg-bg border border-border rounded-lg text-sm text-text placeholder:text-text-light focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setModalOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!formPlanId || !formVersion || !formSubmitter}
+            >
+              提交
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </PageContainer>
   );
 }

@@ -2,9 +2,7 @@ import { PageContainer } from '../../components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Button } from '../../components/ui/Button';
-import { mockPlans } from '../../data/mockPlans';
-import { mockInventory, mockFestivals, mockTodos } from '../../data/mockMisc';
-import { mockCustomers } from '../../data/mockCustomers';
+import { useAppStore } from '../../store';
 import { formatCurrency, formatDate } from '../../utils';
 import {
   TrendingUp,
@@ -16,21 +14,22 @@ import {
   CalendarDays,
   UserCheck,
   Plus,
-  CheckCircle2,
   FileEdit,
   Truck,
   Boxes,
   Palette,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { PlanStatus } from '../../types';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  
+  const { plans, festivals, todos, inventory, customers } = useAppStore();
+
   const stats = [
     {
       label: '年度采购金额',
-      value: formatCurrency(856000),
+      value: formatCurrency(plans.reduce((s, p) => s + p.budget, 0)),
       change: '+12.5%',
       trend: 'up',
       icon: TrendingUp,
@@ -38,7 +37,7 @@ export default function Dashboard() {
     },
     {
       label: '进行中计划',
-      value: '5',
+      value: String(plans.filter((p) => p.status !== 'completed').length),
       change: '+2',
       trend: 'up',
       icon: Package,
@@ -46,7 +45,7 @@ export default function Dashboard() {
     },
     {
       label: '待处理事项',
-      value: '8',
+      value: String(todos.filter((t) => t.status === 'pending').length),
       change: '-3',
       trend: 'down',
       icon: Clock,
@@ -54,7 +53,7 @@ export default function Dashboard() {
     },
     {
       label: '库存预警',
-      value: '2',
+      value: String(inventory.filter((i) => i.quantity < i.minThreshold).length),
       change: '+1',
       trend: 'up',
       icon: AlertTriangle,
@@ -62,12 +61,9 @@ export default function Dashboard() {
     },
   ];
 
-  const nextFestival = mockFestivals[0];
-
   return (
     <PageContainer title="工作台" subtitle="欢迎回来，今天是美好的一天">
       <div className="space-y-6">
-        {/* 数据概览卡片 */}
         <div className="grid grid-cols-4 gap-5">
           {stats.map((stat, index) => (
             <Card key={index} hoverable>
@@ -76,9 +72,7 @@ export default function Dashboard() {
                   <div>
                     <p className="text-sm text-text-light">{stat.label}</p>
                     <p className="text-2xl font-bold text-text mt-2 font-display">{stat.value}</p>
-                    <p className={`text-xs mt-2 ${
-                      stat.trend === 'up' ? 'text-emerald-600' : 'text-red-500'
-                    }`}>
+                    <p className={`text-xs mt-2 ${stat.trend === 'up' ? 'text-emerald-600' : 'text-red-500'}`}>
                       {stat.change} 较上月
                     </p>
                   </div>
@@ -92,12 +86,11 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-3 gap-6">
-          {/* 节日倒计时 */}
           <Card className="col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>节日倒计时</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/plans/create')}>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/plans')}>
                   <Plus className="w-4 h-4" />
                   创建采购计划
                 </Button>
@@ -105,7 +98,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-4 gap-4">
-                {mockFestivals.slice(0, 4).map((festival) => (
+                {festivals.slice(0, 4).map((festival) => (
                   <div
                     key={festival.id}
                     className={`relative p-5 rounded-xl text-center transition-all duration-300 hover:scale-105 cursor-pointer ${
@@ -113,7 +106,7 @@ export default function Dashboard() {
                         ? 'bg-gradient-to-br from-amber-50 to-orange-100 border border-amber-200'
                         : 'bg-bg border border-border'
                     }`}
-                    onClick={() => navigate('/plans/create')}
+                    onClick={() => navigate('/plans')}
                   >
                     <div className="text-3xl mb-2">{festival.icon}</div>
                     <p className="font-medium text-text">{festival.name}</p>
@@ -137,17 +130,16 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* 待办事项 */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>待办事项</CardTitle>
-                <span className="text-xs text-text-light">{mockTodos.filter(t => t.status === 'pending').length} 项待处理</span>
+                <span className="text-xs text-text-light">{todos.filter(t => t.status === 'pending').length} 项待处理</span>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
               <ul className="space-y-3">
-                {mockTodos.slice(0, 5).map((todo) => {
+                {todos.slice(0, 5).map((todo) => {
                   const iconMap: Record<string, typeof FileEdit> = {
                     plan: FileEdit,
                     design: Palette,
@@ -156,10 +148,7 @@ export default function Dashboard() {
                   };
                   const Icon = iconMap[todo.type] || FileEdit;
                   return (
-                    <li
-                      key={todo.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-bg transition-colors cursor-pointer group"
-                    >
+                    <li key={todo.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-bg transition-colors cursor-pointer group">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                         todo.priority === 'high' ? 'bg-red-50 text-red-500' :
                         todo.priority === 'medium' ? 'bg-amber-50 text-amber-500' :
@@ -168,14 +157,10 @@ export default function Dashboard() {
                         <Icon className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text truncate group-hover:text-primary transition-colors">
-                          {todo.title}
-                        </p>
-                        <p className="text-xs text-text-light mt-0.5">
-                          截止：{formatDate(todo.deadline)}
-                        </p>
+                        <p className="text-sm font-medium text-text truncate group-hover:text-primary transition-colors">{todo.title}</p>
+                        <p className="text-xs text-text-light mt-0.5">截止：{formatDate(todo.deadline)}</p>
                       </div>
-                      <StatusBadge status={todo.priority} />
+                      <StatusBadge status={todo.priority as any} />
                     </li>
                   );
                 })}
@@ -188,7 +173,6 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-3 gap-6">
-          {/* 采购计划 */}
           <Card className="col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -200,7 +184,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-3">
-                {mockPlans.slice(0, 4).map((plan) => (
+                {plans.slice(0, 4).map((plan) => (
                   <div
                     key={plan.id}
                     className="p-4 rounded-lg border border-border hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer group"
@@ -212,16 +196,14 @@ export default function Dashboard() {
                           <CalendarDays className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <h4 className="font-medium text-text group-hover:text-primary transition-colors">
-                            {plan.name}
-                          </h4>
+                          <h4 className="font-medium text-text group-hover:text-primary transition-colors">{plan.name}</h4>
                           <p className="text-xs text-text-light mt-0.5">
                             {plan.festival} · {plan.employeeCount}人 · 预算{formatCurrency(plan.budget)}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <StatusBadge status={plan.status} />
+                        <StatusBadge status={plan.status as PlanStatus} />
                         <p className="text-xs text-text-light mt-1">{formatDate(plan.deadline)} 截止</p>
                       </div>
                     </div>
@@ -243,7 +225,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* 快速操作 + 库存预警 */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -252,7 +233,7 @@ export default function Dashboard() {
               <CardContent className="pt-0">
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { icon: Plus, label: '新建计划', path: '/plans/create' },
+                    { icon: Plus, label: '新建计划', path: '/plans' },
                     { icon: Gift, label: '礼品库', path: '/gifts' },
                     { icon: UserCheck, label: '客户送礼', path: '/customers' },
                     { icon: Boxes, label: '库存管理', path: '/inventory' },
@@ -276,7 +257,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="pt-0">
                 <ul className="space-y-3">
-                  {mockInventory.filter(item => item.quantity < item.minThreshold).map((item) => (
+                  {inventory.filter(item => item.quantity < item.minThreshold).map((item) => (
                     <li
                       key={item.id}
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg transition-colors cursor-pointer"
@@ -287,9 +268,7 @@ export default function Dashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-text truncate">{item.giftName}</p>
-                        <p className="text-xs text-text-light">
-                          现有 {item.quantity} 件 · 阈值 {item.minThreshold} 件
-                        </p>
+                        <p className="text-xs text-text-light">现有 {item.quantity} 件 · 阈值 {item.minThreshold} 件</p>
                       </div>
                     </li>
                   ))}
@@ -299,7 +278,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 客户送礼提醒 */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -311,23 +289,17 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="grid grid-cols-4 gap-4">
-              {mockCustomers.slice(0, 4).map((customer) => (
+              {customers.slice(0, 4).map((customer) => (
                 <div
                   key={customer.id}
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-bg transition-colors cursor-pointer group"
                   onClick={() => navigate(`/customers/${customer.id}`)}
                 >
-                  <img
-                    src={customer.avatar}
-                    alt={customer.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
+                  <img src={customer.avatar} alt={customer.name} className="w-12 h-12 rounded-full object-cover" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-text truncate group-hover:text-primary transition-colors">
-                        {customer.name}
-                      </p>
-                      <StatusBadge status={customer.level} />
+                      <p className="font-medium text-text truncate group-hover:text-primary transition-colors">{customer.name}</p>
+                      <StatusBadge status={customer.level as any} />
                     </div>
                     <p className="text-xs text-text-light truncate">{customer.company}</p>
                     <p className="text-xs text-accent mt-1">🎂 {customer.birthday}</p>

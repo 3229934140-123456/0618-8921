@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { mockEmployees, departmentsList, levelsList } from '../../data/mockEmployees';
+import { useAppStore } from '../../store';
+import { departmentsList, levelsList } from '../../data/mockEmployees';
 import {
   Search,
   Filter,
@@ -17,12 +18,26 @@ import {
 } from 'lucide-react';
 
 export default function Employees() {
+  const employees = useAppStore((s) => s.employees);
+  const syncEmployeesToSupplier = useAppStore((s) => s.syncEmployeesToSupplier);
   const [departmentFilter, setDepartmentFilter] = useState('全部部门');
   const [levelFilter, setLevelFilter] = useState('全部级别');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [addressFilter, setAddressFilter] = useState<'all' | 'complete' | 'incomplete'>('all');
+  const [toast, setToast] = useState('');
 
-  const filteredEmployees = mockEmployees.filter((emp) => {
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(''), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const handleSync = () => {
+    const synced = syncEmployeesToSupplier();
+    setToast(`已成功同步 ${synced.length} 名员工地址至供应商`);
+  };
+
+  const filteredEmployees = employees.filter((emp) => {
     const matchDept = departmentFilter === '全部部门' || emp.department === departmentFilter;
     const matchLevel = levelFilter === '全部级别' || emp.level === levelFilter;
     const matchSearch = emp.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
@@ -33,18 +48,23 @@ export default function Employees() {
     return matchDept && matchLevel && matchSearch && matchAddress;
   });
 
-  const completeCount = mockEmployees.filter(e => e.addressComplete).length;
-  const completeRate = Math.round((completeCount / mockEmployees.length) * 100);
+  const completeCount = employees.filter(e => e.addressComplete).length;
+  const completeRate = Math.round((completeCount / employees.length) * 100);
 
   return (
     <PageContainer title="员工地址管理" subtitle="管理员工收货地址，支持批量操作">
+      {toast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg text-sm font-medium">
+          {toast}
+        </div>
+      )}
       <div className="space-y-6">
         {/* 统计卡片 */}
         <div className="grid grid-cols-4 gap-5">
           {[
-            { label: '员工总数', value: mockEmployees.length, icon: Users, color: 'from-blue-500 to-blue-600' },
+            { label: '员工总数', value: employees.length, icon: Users, color: 'from-blue-500 to-blue-600' },
             { label: '地址已完善', value: completeCount, icon: CheckCircle, color: 'from-emerald-500 to-green-500' },
-            { label: '待完善地址', value: mockEmployees.length - completeCount, icon: AlertCircle, color: 'from-amber-500 to-orange-500' },
+            { label: '待完善地址', value: employees.length - completeCount, icon: AlertCircle, color: 'from-amber-500 to-orange-500' },
             { label: '地址完整率', value: `${completeRate}%`, icon: MapPin, color: 'from-violet-500 to-purple-500' },
           ].map((stat, index) => (
             <Card key={index}>
@@ -122,7 +142,7 @@ export default function Employees() {
                   <Download className="w-4 h-4" />
                   导出
                 </Button>
-                <Button>
+                <Button onClick={handleSync}>
                   <Send className="w-4 h-4" />
                   同步供应商
                 </Button>
