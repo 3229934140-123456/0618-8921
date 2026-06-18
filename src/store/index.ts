@@ -18,6 +18,9 @@ import type {
   DesignStatus,
   UnclaimedItem,
   SyncStatus,
+  SyncRecord,
+  GiftFilterState,
+  ReviewRecord,
 } from '../types';
 import { mockPlans } from '../data/mockPlans';
 import { mockGifts } from '../data/mockGifts';
@@ -57,6 +60,9 @@ interface AppState {
   notifications: string[];
   unclaimedList: UnclaimedItem[];
   employeeSyncStatus: SyncStatus;
+  employeeSyncHistory: SyncRecord[];
+  giftFilterState: GiftFilterState;
+  reviewRecords: ReviewRecord[];
 
   addPlan: (plan: PurchasePlan) => void;
   updatePlan: (id: string, updates: Partial<PurchasePlan>) => void;
@@ -78,6 +84,9 @@ interface AppState {
   syncEmployeesToSupplier: () => string[];
   remindUnclaimed: (ids: string[]) => string[];
   remindSingleUnclaimed: (id: string) => boolean;
+
+  setGiftFilterState: (state: GiftFilterState) => void;
+  addReviewRecord: (record: ReviewRecord) => void;
 
   addNotification: (msg: string) => void;
   clearNotifications: () => void;
@@ -102,6 +111,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     syncedCount: 0,
     lastSyncTime: null,
   },
+  employeeSyncHistory: [],
+  giftFilterState: {
+    categoryFilter: '全部',
+    typeFilter: 'all',
+    searchKeyword: '',
+    viewMode: 'grid',
+  },
+  reviewRecords: [
+    {
+      id: 'r1',
+      planId: 'p1',
+      reviewer: '李总监',
+      time: '2024-05-20 14:30',
+      content: '礼品方案符合预算，供应商资质齐全，建议通过。',
+      status: 'approved',
+    },
+  ],
 
   addPlan: (plan) =>
     set((state) => ({ plans: [plan, ...state.plans] })),
@@ -188,12 +214,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     const synced = get()
       .employees.filter((e) => e.addressComplete)
       .map((e) => e.name);
-    set({
+    const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const newRecord: SyncRecord = {
+      id: String(Date.now()),
+      syncedCount: synced.length,
+      syncTime: now,
+    };
+    set((state) => ({
       employeeSyncStatus: {
         syncedCount: synced.length,
-        lastSyncTime: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        lastSyncTime: now,
       },
-    });
+      employeeSyncHistory: [newRecord, ...state.employeeSyncHistory].slice(0, 10),
+    }));
     return synced;
   },
 
@@ -219,6 +252,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     }));
     return true;
+  },
+
+  setGiftFilterState: (filterState) => {
+    set({ giftFilterState: filterState });
+  },
+
+  addReviewRecord: (record) => {
+    set((state) => ({ reviewRecords: [record, ...state.reviewRecords] }));
   },
 
   addNotification: (msg) =>

@@ -15,6 +15,9 @@ import {
   ArrowUpFromLine,
   PackageCheck,
   Users,
+  RefreshCw,
+  Bell,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -77,18 +80,18 @@ export default function Inventory() {
   };
 
   const handleBatchRemind = () => {
-    const unremindedIds = unclaimedList.filter(u => !u.reminded).map(u => u.id);
-    if (unremindedIds.length === 0) {
-      showToast('所有员工均已提醒过');
+    const allIds = unclaimedList.map(u => u.id);
+    if (allIds.length === 0) {
+      showToast('暂无未领取人员');
       return;
     }
-    const reminded = remindUnclaimed(unremindedIds);
-    showToast(`已向 ${reminded.length} 名员工发送领取提醒`);
+    const reminded = remindUnclaimed(allIds);
+    showToast(`已向 ${reminded.length} 名员工发送/重发领取提醒`);
   };
 
   const handleSingleRemind = (id: string, name: string) => {
     remindSingleUnclaimed(id);
-    showToast(`已向 ${name} 发送领取提醒`);
+    showToast(`已向 ${name} 发送/重发领取提醒`);
   };
 
   return (
@@ -387,21 +390,36 @@ export default function Inventory() {
                       <td className="py-4 px-5">
                         {item.reminded ? (
                           <div>
-                            <StatusBadge status="active">已提醒</StatusBadge>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
+                              <CheckCircle2 className="w-3 h-3" />
+                              已提醒
+                            </span>
                             <p className="text-xs text-text-light mt-1">{item.remindTime}</p>
                           </div>
                         ) : (
-                          <StatusBadge status="inactive">未提醒</StatusBadge>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
+                            <Bell className="w-3 h-3" />
+                            待提醒
+                          </span>
                         )}
                       </td>
                       <td className="py-4 px-5 text-center">
                         <Button
-                          variant="ghost"
+                          variant={item.reminded ? 'outline' : 'ghost'}
                           size="sm"
                           onClick={() => handleSingleRemind(item.id, item.name)}
-                          disabled={item.reminded}
                         >
-                          {item.reminded ? '已提醒' : '发送提醒'}
+                          {item.reminded ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                              重新提醒
+                            </>
+                          ) : (
+                            <>
+                              <Bell className="w-3.5 h-3.5 mr-1" />
+                              发送提醒
+                            </>
+                          )}
                         </Button>
                       </td>
                     </tr>

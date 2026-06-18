@@ -220,3 +220,25 @@ export interface SyncStatus {
   syncedCount: number;
   lastSyncTime: string | null;
 }
+
+export interface SyncRecord {
+  id: string;
+  syncedCount: number;
+  syncTime: string;
+}
+
+export interface GiftFilterState {
+  categoryFilter: string;
+  typeFilter: string;
+  searchKeyword: string;
+  viewMode: 'grid' | 'list';
+}
+
+export interface ReviewRecord {
+  id: string;
+  planId: string;
+  reviewer: string;
+  time: string;
+  content: string;
+  status: 'approved' | 'rejected' | 'comment';
+}

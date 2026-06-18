@@ -18,14 +18,19 @@ import {
   Layers,
   User,
   FileText,
+  ExternalLink,
+  Gift,
 } from 'lucide-react';
 
 export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { suppliers, quotations } = useAppStore();
+  const { suppliers, quotations, gifts } = useAppStore();
   const supplier = suppliers.find((s) => s.id === id);
   const supplierQuotations = quotations.filter((q) => q.supplierId === id);
+  const findGiftByQuotation = (giftName: string) => {
+    return gifts.find((g) => g.name === giftName);
+  };
 
   if (!supplier) {
     return (
@@ -246,45 +251,65 @@ export default function SupplierDetail() {
                           <th className="text-left py-3 px-5 text-xs font-medium text-text-light">
                             样品
                           </th>
+                          <th className="text-center py-3 px-5 text-xs font-medium text-text-light">
+                            操作
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {supplierQuotations.map((quote) => (
-                          <tr key={quote.id} className="hover:bg-bg/30 transition-colors">
-                            <td className="py-4 px-5">
-                              <div className="flex items-center gap-2">
-                                <Package className="w-4 h-4 text-text-light" />
-                                <span className="font-medium text-text">{quote.giftName}</span>
-                              </div>
-                            </td>
-                            <td className="py-4 px-5 text-sm text-text">
-                              {quote.festival || '-'}
-                            </td>
-                            <td className="py-4 px-5">
-                              <span className="px-2 py-0.5 bg-bg rounded text-xs text-text-light">
-                                {quote.giftType || '-'}
-                              </span>
-                            </td>
-                            <td className="py-4 px-5">
-                              <span className="font-semibold text-text">
-                                {formatCurrency(quote.unitPrice)}
-                              </span>
-                            </td>
-                            <td className="py-4 px-5">
-                              <span className="text-lg font-bold text-accent font-display">
-                                {formatCurrency(quote.totalPrice)}
-                              </span>
-                            </td>
-                            <td className="py-4 px-5 text-sm text-text">
-                              {quote.deliveryDays} 天
-                            </td>
-                            <td className="py-4 px-5">
-                              <StatusBadge status={quote.sampleAvailable ? 'active' : 'inactive'}>
-                                {quote.sampleAvailable ? '可提供' : '不提供'}
-                              </StatusBadge>
-                            </td>
-                          </tr>
-                        ))}
+                        {supplierQuotations.map((quote) => {
+                          const matchedGift = findGiftByQuotation(quote.giftName);
+                          return (
+                            <tr key={quote.id} className="hover:bg-bg/30 transition-colors">
+                              <td className="py-4 px-5">
+                                <div className="flex items-center gap-2">
+                                  <Package className="w-4 h-4 text-text-light" />
+                                  <span className="font-medium text-text">{quote.giftName}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-5 text-sm text-text">
+                                {quote.festival || '-'}
+                              </td>
+                              <td className="py-4 px-5">
+                                <span className="px-2 py-0.5 bg-bg rounded text-xs text-text-light">
+                                  {quote.giftType || '-'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5">
+                                <span className="font-semibold text-text">
+                                  {formatCurrency(quote.unitPrice)}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5">
+                                <span className="text-lg font-bold text-accent font-display">
+                                  {formatCurrency(quote.totalPrice)}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5 text-sm text-text">
+                                {quote.deliveryDays} 天
+                              </td>
+                              <td className="py-4 px-5">
+                                <StatusBadge status={quote.sampleAvailable ? 'active' : 'inactive'}>
+                                  {quote.sampleAvailable ? '可提供' : '不提供'}
+                                </StatusBadge>
+                              </td>
+                              <td className="py-4 px-5 text-center">
+                                {matchedGift ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => navigate(`/gifts/${matchedGift.id}`)}
+                                  >
+                                    <Gift className="w-3.5 h-3.5 mr-1" />
+                                    查看礼品
+                                  </Button>
+                                ) : (
+                                  <span className="text-xs text-text-light">--</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

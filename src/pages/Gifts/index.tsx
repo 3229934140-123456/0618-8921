@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -20,10 +20,21 @@ import {
 export default function Gifts() {
   const navigate = useNavigate();
   const gifts = useAppStore((s) => s.gifts);
-  const [categoryFilter, setCategoryFilter] = useState('全部');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const giftFilterState = useAppStore((s) => s.giftFilterState);
+  const setGiftFilterState = useAppStore((s) => s.setGiftFilterState);
+  const [categoryFilter, setCategoryFilter] = useState(giftFilterState.categoryFilter);
+  const [typeFilter, setTypeFilter] = useState(giftFilterState.typeFilter);
+  const [searchKeyword, setSearchKeyword] = useState(giftFilterState.searchKeyword);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(giftFilterState.viewMode);
+
+  useEffect(() => {
+    setGiftFilterState({ categoryFilter, typeFilter, searchKeyword, viewMode });
+  }, [categoryFilter, typeFilter, searchKeyword, viewMode, setGiftFilterState]);
+
+  const handleCardClick = (giftId: string) => {
+    setGiftFilterState({ categoryFilter, typeFilter, searchKeyword, viewMode });
+    navigate(`/gifts/${giftId}`);
+  };
 
   const filteredGifts = gifts.filter((gift) => {
     const matchCategory = categoryFilter === '全部' || gift.category === categoryFilter;
@@ -124,7 +135,7 @@ export default function Gifts() {
               <Card
                 key={gift.id}
                 hoverable
-                onClick={() => navigate(`/gifts/${gift.id}`)}
+                onClick={() => handleCardClick(gift.id)}
                 className="overflow-hidden group"
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-bg">
@@ -179,7 +190,7 @@ export default function Gifts() {
         ) : (
           <div className="space-y-3">
             {filteredGifts.map((gift) => (
-              <Card key={gift.id} hoverable onClick={() => navigate(`/gifts/${gift.id}`)}>
+              <Card key={gift.id} hoverable onClick={() => handleCardClick(gift.id)}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     <img

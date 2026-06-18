@@ -15,17 +15,23 @@ import {
   CheckCircle,
   AlertCircle,
   Users,
+  ChevronDown,
+  ChevronUp,
+  History,
+  Clock,
 } from 'lucide-react';
 
 export default function Employees() {
   const employees = useAppStore((s) => s.employees);
   const syncEmployeesToSupplier = useAppStore((s) => s.syncEmployeesToSupplier);
   const employeeSyncStatus = useAppStore((s) => s.employeeSyncStatus);
+  const employeeSyncHistory = useAppStore((s) => s.employeeSyncHistory);
   const [departmentFilter, setDepartmentFilter] = useState('全部部门');
   const [levelFilter, setLevelFilter] = useState('全部级别');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [addressFilter, setAddressFilter] = useState<'all' | 'complete' | 'incomplete'>('all');
   const [toast, setToast] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -89,7 +95,10 @@ export default function Employees() {
         {employeeSyncStatus.lastSyncTime && (
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+              <div
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => setShowHistory(!showHistory)}
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <CheckCircle className="w-5 h-5 text-emerald-600" />
@@ -98,16 +107,79 @@ export default function Employees() {
                     <p className="text-sm font-medium text-text">地址同步状态</p>
                     <p className="text-xs text-text-light mt-0.5">
                       最近同步时间：{employeeSyncStatus.lastSyncTime}，已同步 {employeeSyncStatus.syncedCount} 名员工地址至供应商
+                      {employeeSyncHistory.length > 1 &&
+                        ` · 共 ${employeeSyncHistory.length} 次同步记录`}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
                     <CheckCircle className="w-3 h-3" />
                     已同步
                   </span>
+                  {employeeSyncHistory.length > 0 && (
+                    <button className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors">
+                      {showHistory ? (
+                        <>
+                          收起记录
+                          <ChevronUp className="w-4 h-4" />
+                        </>
+                      ) : (
+                        <>
+                          查看历史
+                          <ChevronDown className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {showHistory && employeeSyncHistory.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="flex items-center gap-2 mb-3">
+                    <History className="w-4 h-4 text-text-light" />
+                    <p className="text-xs font-medium text-text-light">同步历史记录</p>
+                  </div>
+                  <div className="space-y-2">
+                    {employeeSyncHistory.map((record, index) => (
+                      <div
+                        key={record.id}
+                        className="flex items-center justify-between p-3 bg-bg rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                index === 0 ? 'bg-emerald-500' : 'bg-gray-300'
+                              }`}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3.5 h-3.5 text-text-light" />
+                            <span className="text-sm text-text">{record.syncTime}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-primary">
+                            同步 {record.syncedCount} 人
+                          </span>
+                          {index === 0 && (
+                            <span className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-xs font-medium">
+                              本次
+                            </span>
+                          )}
+                          {index === 1 && (
+                            <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                              上次
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
